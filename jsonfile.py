@@ -4,7 +4,7 @@ on a disk with the corresponding Python object instance.
 
 Can be used to autosave JSON compatible Python data.
 """
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 
 
@@ -19,10 +19,12 @@ import tempfile
 class JSONFileBase:
 
   def _get_adapter_or_value(self, data):
-    if isinstance(data, collections.abc.Sequence):
-      return JSONFileArray(self._root, data)
-    elif isinstance(data, collections.abc.Mapping):
+    if isinstance(data, collections.abc.Mapping):
       return JSONFileObject(self._root, data)
+    elif isinstance(data, str):
+      return data
+    elif isinstance(data, collections.abc.Sequence):
+      return JSONFileArray(self._root, data)
     else:
       return data
 
@@ -30,6 +32,11 @@ class JSONFileBase:
   def _value_norm(value):
     if isinstance(value, collections.abc.Mapping):
       return {str(k): v for k, v in value.items()}
+          # JSON obejct keys must be strings
+    elif isinstance(value, str):
+      return value
+    elif isinstance(value, collections.abc.Sequence):
+      return list(value)
     else:
       return value
 
