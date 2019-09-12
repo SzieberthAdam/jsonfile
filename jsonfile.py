@@ -4,7 +4,7 @@ on a disk with the corresponding Python object instance.
 
 Can be used to autosave JSON compatible Python data.
 """
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 
@@ -35,14 +35,47 @@ class JSONFileBase:
 
 
 
-class JSONFile(JSONFileBase):
+class JSONFIleRoot(JSONFileBase):
+
+  def __init__(self):
+    self._root = self
+
+  @property
+  def data(self):
+    return self._get_adapter_or_value(self._data)
+
+  @data.setter
+  def data(self, value):
+    if value is ...:
+      raise ValueError("Ellipsis is forbidden, call delete()")
+    old_data = copy.copy(self._data)
+    self._data = self._value_norm(value)
+    self.may_changed(self, old_data)
+
+  def delete(self):
+    # could have been @data.deleter but that would be obscure
+    old_data = copy.copy(self._data)
+    self._data = ...
+    self.may_changed(self, old_data)
+
+  def may_changed(self, inst, old_data):
+    if inst._data != old_data:
+      self.changed = True
+      self.on_changed()
+
+  def on_changed(self):
+    raise NotImplementedError("shuld be handled by subclass")
+
+
+
+class JSONFile(JSONFIleRoot):
 
   def __init__(self, filepath, *,
       autosave=False,
       dump_kwargs = None,
       load_kwargs = None,
   ):
-    self._root = self
+    super().__init__()  # creates self._root
     self.autosave = autosave
     self.dump_kwargs = dump_kwargs or dict(
         skipkeys=False,
@@ -74,18 +107,6 @@ class JSONFile(JSONFileBase):
     self._autosave = bool(value)  # ensure boolean
 
   @property
-  def data(self):
-    return self._get_adapter_or_value(self._data)
-
-  @data.setter
-  def data(self, value):
-    if value is ...:
-      raise ValueError("Ellipsis is forbidden, call delete()")
-    old_data = copy.copy(self._data)
-    self._data = self._value_norm(value)
-    self.may_changed(self, old_data)
-
-  @property
   def filepath(self):
     return self._filepath
 
@@ -94,17 +115,12 @@ class JSONFile(JSONFileBase):
     self._filepath = pathlib.Path(value) # ensure Path instance
     self.reload()  # creates self._data
 
-  def delete(self):
-    # could have been @data.deleter but that would be obscure
-    old_data = copy.copy(self._data)
-    self._data = ...
-    self.may_changed(self, old_data)
-
   def may_changed(self, inst, old_data):
-    if inst._data != old_data:
-      self.changed = True
-      if self.autosave:
-        self.save()
+    return super().may_changed(inst, old_data)
+
+  def on_changed(self):
+    if self.autosave:
+      self.save()
 
   def reload(self):
     p = self.filepath

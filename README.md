@@ -1,7 +1,7 @@
 jsonfile
 ==============
 
-version 0.0.1
+version 0.0.2
 
 The ``jsonfile`` Python module can be used to sync a JSON file on a disk with the corresponding Python object instance.
 
