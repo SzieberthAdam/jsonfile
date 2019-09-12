@@ -4,7 +4,7 @@ on a disk with the corresponding Python object instance.
 
 Can be used to autosave JSON compatible Python data.
 """
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 
 
@@ -35,10 +35,12 @@ class JSONFileBase:
 
 
 
-class JSONFIleRoot(JSONFileBase):
+class JSONFileRoot(JSONFileBase):
 
   def __init__(self):
+    self._data = ...
     self._root = self
+    self.changed = None
 
   @property
   def data(self):
@@ -61,21 +63,21 @@ class JSONFIleRoot(JSONFileBase):
   def may_changed(self, inst, old_data):
     if inst._data != old_data:
       self.changed = True
-      self.on_changed()
+      self.on_change()
 
-  def on_changed(self):
-    raise NotImplementedError("shuld be handled by subclass")
+  def on_change(self):
+    raise NotImplementedError("should be handled by subclass")
 
 
 
-class JSONFile(JSONFIleRoot):
+class JSONFile(JSONFileRoot):
 
   def __init__(self, filepath, *,
       autosave=False,
       dump_kwargs = None,
       load_kwargs = None,
   ):
-    super().__init__()  # creates self._root
+    super().__init__()
     self.autosave = autosave
     self.dump_kwargs = dump_kwargs or dict(
         skipkeys=False,
@@ -96,7 +98,7 @@ class JSONFile(JSONFIleRoot):
         parse_constant=None,
         object_pairs_hook=None,
     )
-    self.filepath = filepath  # creates self.data, self.changed
+    self.filepath = filepath
 
   @property
   def autosave(self):
@@ -118,7 +120,7 @@ class JSONFile(JSONFIleRoot):
   def may_changed(self, inst, old_data):
     return super().may_changed(inst, old_data)
 
-  def on_changed(self):
+  def on_change(self):
     if self.autosave:
       self.save()
 
