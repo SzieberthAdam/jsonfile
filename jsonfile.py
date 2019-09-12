@@ -37,9 +37,9 @@ class JSONFileBase:
 
 class JSONFileRoot(JSONFileBase):
 
-  def __init__(self):
-    self._data = ...
+  def __init__(self, data=...):
     self._root = self
+    self._data = data
     self.changed = None
 
   @property
@@ -73,11 +73,12 @@ class JSONFileRoot(JSONFileBase):
 class JSONFile(JSONFileRoot):
 
   def __init__(self, filepath, *,
+      data=...,
       autosave=False,
       dump_kwargs = None,
       load_kwargs = None,
   ):
-    super().__init__()
+    super().__init__(data=data)
     self.autosave = autosave
     self.dump_kwargs = dump_kwargs or dict(
         skipkeys=False,
@@ -99,6 +100,10 @@ class JSONFile(JSONFileRoot):
         object_pairs_hook=None,
     )
     self.filepath = filepath
+    if self._data is ...:
+      self.reload()
+    elif autosave:
+      self.save()
 
   @property
   def autosave(self):
@@ -115,7 +120,6 @@ class JSONFile(JSONFileRoot):
   @filepath.setter
   def filepath(self, value):
     self._filepath = pathlib.Path(value) # ensure Path instance
-    self.reload()  # creates self._data
 
   def may_changed(self, inst, old_data):
     return super().may_changed(inst, old_data)
