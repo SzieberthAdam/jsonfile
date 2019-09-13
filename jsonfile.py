@@ -4,7 +4,7 @@ on a disk with the corresponding Python object instance.
 
 Can be used to autosave JSON compatible Python data.
 """
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 
 
@@ -148,12 +148,14 @@ class JSONFile(JSONFileRoot):
         self._data = ...
         self.changed = None
 
-  def save(self):
+  def save(self, ensure_parents=True):
     p = self.filepath
     if self._data is ... and p.is_file():
       p.unlink()
     else:
       s = json.dumps(self._data, **self.dump_kwargs)
+      if ensure_parents:  # ensure parent directories
+        p.parent.mkdir(parents=True, exist_ok=True)
       with tempfile.NamedTemporaryFile(
           'w',
           dir = p.parent,
