@@ -46,9 +46,9 @@ class JSONFileRoot(JSONFileBase):
 
   def __init__(self, data=..., default_data=...):
     self._root = self
-    self._data = data
     self.changed = None
     self.default_data = default_data
+    self._data = (default_data if data is ... else data)
 
   @property
   def data(self):
