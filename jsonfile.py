@@ -44,10 +44,11 @@ class JSONFileBase:
 
 class JSONFileRoot(JSONFileBase):
 
-  def __init__(self, data=...):
+  def __init__(self, data=..., default_data=...):
     self._root = self
     self._data = data
     self.changed = None
+    self.default_data = default_data
 
   @property
   def data(self):
@@ -64,7 +65,7 @@ class JSONFileRoot(JSONFileBase):
   def delete(self):
     # could have been @data.deleter but that would be obscure
     old_data = copy.copy(self._data)
-    self._data = ...
+    self._data = self.default_data
     self.may_changed(self, old_data)
 
   def may_changed(self, inst, old_data):
@@ -80,12 +81,13 @@ class JSONFileRoot(JSONFileBase):
 class JSONFile(JSONFileRoot):
 
   def __init__(self, filepath, *,
-      data=...,
-      autosave=False,
+      data = ...,
+      default_data = ...,
+      autosave = False,
       dump_kwargs = None,
       load_kwargs = None,
   ):
-    super().__init__(data=data)
+    super().__init__(data=data, default_data=default_data)
     self.autosave = autosave
     self.dump_kwargs = dump_kwargs or dict(
         skipkeys=False,
@@ -107,7 +109,7 @@ class JSONFile(JSONFileRoot):
         object_pairs_hook=None,
     )
     self.filepath = filepath
-    if self._data is ...:
+    if self._data == self.default_data:
       self.reload()
     elif autosave:
       self.save()
@@ -145,12 +147,12 @@ class JSONFile(JSONFileRoot):
         self._data = json.load(f, **self.load_kwargs)
         self.changed = False
     else:
-        self._data = ...
+        self._data = copy.deepcopy(self.default_data)
         self.changed = None
 
   def save(self, ensure_parents=True):
     p = self.filepath
-    if self._data is ... and p.is_file():
+    if self._data == self.default_data and p.is_file():
       p.unlink()
     else:
       s = json.dumps(self._data, **self.dump_kwargs)
