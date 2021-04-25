@@ -4,7 +4,7 @@ on a disk with the corresponding Python object instance.
 
 Can be used to autosave JSON compatible Python data.
 """
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 
 
@@ -52,43 +52,7 @@ class JSONFileBase:
 
 
 
-class JSONFileRoot(JSONFileBase):
-
-  def __init__(self, data=..., default_data=...):
-    self._root = self
-    self.changed = None
-    self.default_data = default_data
-    self._data = (default_data if data is ... else data)
-
-  @property
-  def data(self):
-    return self._get_adapter_or_value(self._data)
-
-  @data.setter
-  def data(self, value):
-    if value is ...:
-      raise ValueError("Ellipsis is forbidden, call delete()")
-    old_data = copy.copy(self._data)
-    self._data = self._value_norm(value)
-    self.may_changed(self, old_data)
-
-  def delete(self):
-    # could have been @data.deleter but that would be obscure
-    old_data = copy.copy(self._data)
-    self._data = self.default_data
-    self.may_changed(self, old_data)
-
-  def may_changed(self, inst, old_data):
-    if inst._data != old_data:
-      self.changed = True
-      self.on_change()
-
-  def on_change(self):
-    raise NotImplementedError("should be handled by subclass")
-
-
-
-class JSONFile(JSONFileRoot):
+class JSONFile(JSONFileBase):
 
   def __init__(self, filepath, *,
       data = ...,
@@ -97,7 +61,10 @@ class JSONFile(JSONFileRoot):
       dump_kwargs = None,
       load_kwargs = None,
   ):
-    super().__init__(data=data, default_data=default_data)
+    self._root = self
+    self.changed = None
+    self.default_data = default_data
+    self._data = (default_data if data is ... else data)
     self.autosave = autosave
     self.dump_kwargs = dump_kwargs or dict(
         skipkeys=False,
@@ -140,6 +107,18 @@ class JSONFile(JSONFileRoot):
     self._autosave = bool(value)  # ensure boolean
 
   @property
+  def data(self):
+    return self._get_adapter_or_value(self._data)
+
+  @data.setter
+  def data(self, value):
+    if value is ...:
+      raise ValueError("Ellipsis is forbidden, call delete()")
+    old_data = copy.copy(self._data)
+    self._data = self._value_norm(value)
+    self.may_changed(self, old_data)
+
+  @property
   def filepath(self):
     return self._filepath
 
@@ -148,14 +127,19 @@ class JSONFile(JSONFileRoot):
     self._filepath = pathlib.Path(value) # ensure Path instance
 
   def delete(self):
-    super().delete()
+    # could have been @data.deleter but that would be obscure
+    old_data = copy.copy(self._data)
+    self._data = self.default_data
+    self.may_changed(self, old_data)
     try:
       self.filepath.unlink()
     except FileNotFoundError:
-      pass  # super().delete() deleted the file
+      pass  # delete can happen previously
 
   def may_changed(self, inst, old_data):
-    return super().may_changed(inst, old_data)
+    if inst._data != old_data:
+      self.changed = True
+      self.on_change()
 
   def on_change(self):
     #print("on change", self, self.autosave)
@@ -192,6 +176,7 @@ class JSONFile(JSONFileRoot):
         tf.write(s)
         tp = p.parent / tf.name
       tp.replace(p)
+
 
 
 class JSONFileContainer(JSONFileBase):
@@ -319,6 +304,7 @@ class JSONFileObject(JSONFileContainer, dict):
   def values(self):
     for k in self:
       yield self[k]
+
 
 
 jsonfile = JSONFile
