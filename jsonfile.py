@@ -4,7 +4,7 @@ on a disk with the corresponding Python object instance.
 
 Can be used to autosave JSON compatible Python data.
 """
-__version__ = "0.0.6"
+__version__ = "0.0.8"
 
 
 
@@ -34,12 +34,18 @@ class JSONFileBase:
 
   @staticmethod
   def _value_norm(value):
-    if isinstance(value, collections.abc.Mapping):
+    if isinstance(value, (
+        collections.abc.Mapping,
+        JSONFileObject,
+    )):
       return {str(k): v for k, v in value.items()}
           # JSON obejct keys must be strings
     elif isinstance(value, str):
       return value
-    elif isinstance(value, collections.abc.Sequence):
+    elif isinstance(value, (
+        collections.abc.Sequence,
+        JSONFileArray,
+    )):
       return list(value)
     else:
       return value
@@ -117,6 +123,13 @@ class JSONFile(JSONFileRoot):
       self.reload()
     elif autosave:
       self.save()
+    # print(self.filepath)
+
+  def __repr__(self):
+    return f"{self.__class__.__name__}('{self.filepath}')"
+
+  def __str__(self):
+    return self.__repr__()
 
   @property
   def autosave(self):
@@ -134,10 +147,18 @@ class JSONFile(JSONFileRoot):
   def filepath(self, value):
     self._filepath = pathlib.Path(value) # ensure Path instance
 
+  def delete(self):
+    super().delete()
+    try:
+      self.filepath.unlink()
+    except FileNotFoundError:
+      pass  # super().delete() deleted the file
+
   def may_changed(self, inst, old_data):
     return super().may_changed(inst, old_data)
 
   def on_change(self):
+    #print("on change", self, self.autosave)
     if self.autosave:
       self.save()
 
@@ -166,11 +187,11 @@ class JSONFile(JSONFileRoot):
           'w',
           dir = p.parent,
           delete = False,
+          encoding="utf8",
       ) as tf:
         tf.write(s)
         tp = p.parent / tf.name
       tp.replace(p)
-
 
 
 class JSONFileContainer(JSONFileBase):
@@ -179,9 +200,15 @@ class JSONFileContainer(JSONFileBase):
     self._root = root
     self._data = data
 
+  def __contains__(self, key):  # has to be explicit
+    return self._data.__contains__(key)
+
   def __delitem__(self, key):  # has to be explicit
     m = self._change_method("__delitem__")
     return m(key)
+
+  def __eq__(self, other):  # has to be explicit
+    return self._data.__eq__(other)
 
   def __dir__(self):
     return self._data.__dir__()
@@ -190,15 +217,28 @@ class JSONFileContainer(JSONFileBase):
   def __doc__(self):
     return self._data.__doc__
 
+  def __iter__(self):  # has to be explicit
+    return self._data.__iter__()
+
   def __getattr__(self, name):
-    if name in self._change_method_names:
-      return self._change_method(name)
-    else:
-      return getattr(self._data, name)
+    return getattr(self._data, name)
+
+  def __getattribute__(self, name):
+    Ns = object.__getattribute__(self, "_change_method_names")
+    if name in Ns:
+      m = object.__getattribute__(self, "_change_method")
+      return m(name)
+    return object.__getattribute__(self, name)
 
   def __getitem__(self, key):
     data = self._data[key]
     return self._get_adapter_or_value(data)
+
+  def __len__(self):
+    return self._data.__len__()
+
+  def __ne__(self, other):  # has to be explicit
+    return self._data.__ne__(other)
 
   def __repr__(self):
     return self._data.__repr__()
@@ -210,7 +250,8 @@ class JSONFileContainer(JSONFileBase):
   def _change_method(self, name):
     def wrapped_method(*args, **kwargs):
       old_data = copy.copy(self._data)
-      m = object.__getattribute__(self._data, name)
+      _data = object.__getattribute__(self, "_data")
+      m = getattr(_data, name)
       try:
         r = m(*args, **kwargs)
         self._root.may_changed(self, old_data)
@@ -222,7 +263,7 @@ class JSONFileContainer(JSONFileBase):
 
 
 
-class JSONFileArray(JSONFileContainer):
+class JSONFileArray(JSONFileContainer, list):
 
   _change_method_names = (
     "__delitem__",
@@ -241,7 +282,7 @@ class JSONFileArray(JSONFileContainer):
 
 
 
-class JSONFileObject(JSONFileContainer):
+class JSONFileObject(JSONFileContainer, dict):
 
   _change_method_names = (
     "__delitem__",
@@ -249,7 +290,7 @@ class JSONFileObject(JSONFileContainer):
     "clear",
     "pop",
     "popitem",
-    "setdefault",
+    # "setdefault",  # handled exceptionally
     "update",
   )
 
@@ -257,6 +298,27 @@ class JSONFileObject(JSONFileContainer):
     key = str(key)  # JSON obejct keys must be strings
     return super().__setitem__(key, value)
 
+  def get(self, key, default=None):
+    # avoid return of list/dict objects
+    try:
+      return self[key]
+    except KeyError:
+      return default
+
+  def items(self):
+    for k in self:
+      yield k, self[k]
+
+  def setdefault(self, key, default):
+    try:
+      return self[key]
+    except KeyError:
+      self[key] = default
+    return self[key]
+
+  def values(self):
+    for k in self:
+      yield self[k]
 
 
 jsonfile = JSONFile
