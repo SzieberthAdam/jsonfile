@@ -301,6 +301,9 @@ class JSONFileObject(JSONFileContainer, dict):
       self[key] = default
     return self[key]
 
+  def keys(self):
+    return [k for k in self]
+
   def values(self):
     for k in self:
       yield self[k]
