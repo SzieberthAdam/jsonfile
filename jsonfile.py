@@ -8,7 +8,7 @@ By default the content of the JSON file is human readable and version control
 friendly.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 
@@ -411,8 +411,8 @@ class JSONFileObject(JSONFileContainer, dict):
         return self[key]
 
     def update(self, *args, **kwargs):
-        _args_ = [self._inputvalue(x) for x in args]
-        _kwargs_ = {k: self._inputvalue(v) for k, v in kwargs.items()}
+        _args = [self._inputvalue(x) for x in args]
+        _kwargs = {k: self._inputvalue(v) for k, v in kwargs.items()}
         self._data.update(*_args, **_kwargs)
         if self._jsonfile.autosave:
             self._jsonfile.save()
