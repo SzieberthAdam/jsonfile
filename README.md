@@ -9,10 +9,12 @@ Can be used to autosave JSON compatible Python data.
 
 By default the content of the JSON file is human readable and version control friendly.
 
-Please note that speed is not a priority. If you want a fast backend, use a database like SQLite or PostgreSQL.
-If a transaction contains many changes, I recommend you to turn off autosaving, do the changes, save(), and finally turn autosave back on.
+**WARNING! This results an extremely slow backend!**
 
-*As of version 0.1.0 and 2021-08-01, the ``jsonfile`` module is considered as open beta. I made a massive zen of Python rewrite. The API is more or less final. The 1.0 release version will be declared once there will be no bugs reported for a year. 1.0 will be published on PyPI with certainly more docstrings added.*
+> ### New host with newer version: https://codeberg.org/szieberth-adam/jsonfile
+> 
+> Archived on GitHub, as I am leaving because of the 2FA enforcement.  -- SzieberthAdam
+
 
 ```python
 >>> import jsonfile
